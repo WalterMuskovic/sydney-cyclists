@@ -1,0 +1,46 @@
+name: Deploy site to Pages
+
+# Serves the locally-built Quarto site on GitHub Pages WITHOUT tracking it in git.
+# `cv/deploy.sh` (on Walter's Mac) builds site/_site, tars it, and overwrites the
+# `site.tgz` asset on the fixed `site` release, then triggers this workflow. Here we
+# just fetch that asset and publish it as the Pages deployment. The only thing this
+# repo ever version-controls is this file — the churny data/images live only as a
+# Release asset + a transient Pages artifact.
+
+on:
+  workflow_dispatch:      # triggered by `gh workflow run deploy.yml` from deploy.sh
+
+permissions:
+  contents: read          # to download the release asset
+  pages: write            # to deploy to Pages
+  id-token: write         # OIDC for deploy-pages
+
+# One deploy at a time; don't cancel an in-flight publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Fetch the built site from the `site` release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p _site
+          gh release download site --repo "$GITHUB_REPOSITORY" --pattern 'site.tgz' --dir .
+          tar xzf site.tgz -C _site
+          rm site.tgz
+
+      - name: Package as a Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
