@@ -1,0 +1,42 @@
+name: Deploy site to Pages
+
+# Publishes a prebuilt static site: the site is uploaded as the `site.tgz` asset on
+# the `site` release; this workflow fetches that asset and deploys it to Pages.
+
+on:
+  workflow_dispatch:      # triggered by `gh workflow run deploy.yml` from deploy.sh
+
+permissions:
+  contents: read          # to download the release asset
+  pages: write            # to deploy to Pages
+  id-token: write         # OIDC for deploy-pages
+
+# One deploy at a time; don't cancel an in-flight publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Fetch the built site from the `site` release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p _site
+          gh release download site --repo "$GITHUB_REPOSITORY" --pattern 'site.tgz' --dir .
+          tar xzf site.tgz -C _site
+          rm site.tgz
+
+      - name: Package as a Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
