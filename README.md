@@ -1,6 +1,6 @@
 # Sydney Cyclists
 
-### 🚲 Live site → https://waltermuskovic.github.io/sydney-cyclists/
+### 🚲 Live site → https://sydneycyclists.com/
 
 Who cycles in inner Sydney, and when: a computer-vision study of Transport for NSW
 live traffic-camera imagery. Across ten inner-Sydney cameras it looks at cyclist
